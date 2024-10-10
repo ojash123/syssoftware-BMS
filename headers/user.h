@@ -13,6 +13,6 @@ typedef struct {
 } User;
 
 int login(User *user, int fd, const char* username, const char* password);
-void logout(User *user);
+int logout(User *user, int fd);
 
 #endif
