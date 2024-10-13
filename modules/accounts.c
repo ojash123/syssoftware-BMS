@@ -88,3 +88,139 @@ int generate_unique_loan_id() {
 
     return loan_id;
 }
+
+Loan* read_loan(int loan_id) {
+    int fd;
+    Loan* loan = malloc(sizeof(Loan));
+    struct flock lock;
+
+    fd = open(LOAN_FILE, O_RDONLY);
+    if (fd == -1) {
+        perror("Error opening loan file");
+        free(loan);
+        return NULL;
+    }
+
+    lock.l_type = F_RDLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
+    fcntl(fd, F_SETLKW, &lock);
+
+    // Read through the file to find the loan
+    while (read(fd, loan, sizeof(Loan)) > 0) {
+        if (loan->loan_ID == loan_id) {
+            lock.l_type = F_UNLCK;
+            fcntl(fd, F_SETLK, &lock);
+            close(fd);
+            return loan;
+        }
+    }
+
+    // If loan not found
+    printf("Loan ID %d not found.\n", loan_id);
+
+    lock.l_type = F_UNLCK;
+    fcntl(fd, F_SETLK, &lock);
+    close(fd);
+    free(loan);
+    return NULL;
+}
+void display_pending_loans() {
+    int fd;
+    Loan loan;
+
+    fd = open(LOAN_FILE, O_RDONLY);
+    if (fd == -1) {
+        perror("Error opening loan file");
+        return;
+    }
+
+    printf("Pending Loans:\n");
+    lseek(fd, 0, SEEK_SET);  
+    while (read(fd, &loan, sizeof(Loan)) > 0) {
+        if (loan.status == 0) {
+            printf("Loan ID: %d, Customer ID: %d, Amount: %.2f\n",
+                   loan.loan_ID, loan.customer_ID, loan.loan_amount);
+            if (loan.employee_ID == -1) {
+                printf("Status: Unassigned\n");
+            } else {
+                printf("Assigned Employee ID: %d\n", loan.employee_ID);
+            }
+        }
+    }
+
+    close(fd);
+}
+
+int save_loan_to_file(Loan loan) {
+    int fd;
+    struct flock lock;
+
+    // Open the loan file for writing or create it
+    fd = open(LOAN_FILE, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (fd == -1) {
+        perror("Error opening loan file");
+        return -1;
+    }
+
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_END;
+    lock.l_start = 0;
+    lock.l_len = 0;
+    fcntl(fd, F_SETLKW, &lock);
+
+    if (write(fd, &loan, sizeof(Loan)) == -1) {
+        perror("Error writing loan to file");
+        close(fd);
+        return -1;
+    }
+
+    lock.l_type = F_UNLCK;
+    fcntl(fd, F_SETLK, &lock);
+    close(fd);
+
+    return 0; // Success
+}
+int update_loan(Loan loan) {
+    int fd;
+    Loan temp_loan;
+    struct flock lock;
+
+    fd = open(LOAN_FILE, O_RDWR);
+    if (fd == -1) {
+        perror("Error opening loan file");
+        return -1;
+    }
+
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
+    fcntl(fd, F_SETLKW, &lock);
+
+    lseek(fd, 0, SEEK_SET);
+    while (read(fd, &temp_loan, sizeof(Loan)) > 0) {
+        if (temp_loan.loan_ID == loan.loan_ID) {
+            lseek(fd, -sizeof(Loan), SEEK_CUR);
+
+            if (write(fd, &loan, sizeof(Loan)) == -1) {
+                perror("Error updating loan");
+                close(fd);
+                return -1;
+            }
+
+            lock.l_type = F_UNLCK;
+            fcntl(fd, F_SETLK, &lock);
+            close(fd);
+            return 0; // Success
+        }
+    }
+
+    printf("Loan ID %d not found for update.\n", loan.loan_ID);
+    lock.l_type = F_UNLCK;
+    fcntl(fd, F_SETLK, &lock);
+    close(fd);
+
+    return -1; // Loan not found
+}
