@@ -26,6 +26,8 @@ void modify_user(int fd, const char *username) {
         if (strcmp(temp_user.username, username) == 0) {
             printf("Enter new password for %s: ", username);
             scanf("%s", temp_user.password);
+            printf("Enter ID: ");
+            scanf("%d", &temp_user.ID);
             lseek(fd, -sizeof(User), SEEK_CUR);
             write(fd, &temp_user, sizeof(User));
             printf("User details updated.\n");

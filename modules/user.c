@@ -49,3 +49,19 @@ int logout(User *user, int fd){
     printf("User %s successfully logged out\n", user->username);
     return 0; //logout success
 }
+
+void change_password(int fd, User *user){
+    User temp_user;
+    lseek(fd, 0, SEEK_SET);
+    while (read(fd, &temp_user, sizeof(User)) > 0) {
+        if (strcmp(temp_user.username, user->username) == 0) {
+            printf("Enter new password for %s: ", user->username);
+            scanf("%s", temp_user.password);
+            lseek(fd, -sizeof(User), SEEK_CUR);
+            write(fd, &temp_user, sizeof(User));
+            printf("User details updated.\n");
+            return;
+        }
+    }
+    printf("User not found.\n");
+}
