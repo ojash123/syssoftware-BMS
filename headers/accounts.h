@@ -1,8 +1,11 @@
 #ifndef ACCOUNTS_H
 #define ACCOUNTS_H
-#define LOAN_ID_FILE "../loan_id_counter.dat"
+#define LOAN_ID_FILE "loan_id_counter.dat"
 #define LOAN_FILE "loans.dat"
+#define ACCOUNT_FILE "accounts.dat"
+#define TRANSACTION_FILE "transactions.dat"
 #include "user.h"
+#include <stdbool.h>
 typedef struct {
     int user_ID;
     bool active;
@@ -10,14 +13,21 @@ typedef struct {
 
 } Account;
 typedef struct {
+    int user_ID;
+    int type; //1 - deposit, 2 - withdraw, 3 - transfer from, 4 - transfer to, 5 - loan 
+    double amt;
+
+} Transaction;
+typedef struct {
     int loan_ID;          
     int customer_ID;       
     int employee_ID;      
     double loan_amount;   
     int status;     // Current status of the loan 0 - pending 1 approved, -1 rejected
 } Loan;
-void update_balance(int customer_id, int accfd, double amount);
-
+int update_balance(int customer_id,  double amount, int type);
+int save_acc_to_file(Account acc);
+int save_transaction(Transaction t);
 int generate_unique_loan_id();
 Loan* read_loan(int loan_id);
 void display_pending_loans();
