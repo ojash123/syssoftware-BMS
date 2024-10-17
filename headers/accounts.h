@@ -4,6 +4,7 @@
 #define LOAN_FILE "loans.dat"
 #define ACCOUNT_FILE "accounts.dat"
 #define TRANSACTION_FILE "transactions.dat"
+#define FEEDBACK_FILE "feedback.txt"
 #include "user.h"
 #include <stdbool.h>
 typedef struct {
