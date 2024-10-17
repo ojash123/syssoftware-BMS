@@ -19,23 +19,7 @@ void add_new_employee(int fd) {
     printf("New employee added successfully.\n");
 }
 
-void modify_user(int fd, const char *username) {
-    User temp_user;
-    lseek(fd, 0, SEEK_SET);
-    while (read(fd, &temp_user, sizeof(User)) > 0) {
-        if (strcmp(temp_user.username, username) == 0) {
-            printf("Enter new password for %s: ", username);
-            scanf("%s", temp_user.password);
-            printf("Enter ID: ");
-            scanf("%d", &temp_user.ID);
-            lseek(fd, -sizeof(User), SEEK_CUR);
-            write(fd, &temp_user, sizeof(User));
-            printf("User details updated.\n");
-            return;
-        }
-    }
-    printf("User not found.\n");
-}
+
 
 void modify_role(int fd, const char *username, int new_role){
     User temp_user;
@@ -52,9 +36,7 @@ void modify_role(int fd, const char *username, int new_role){
     printf("User not found.\n");
 }
 
-void change_password(int fd, User *admin_user){
-    modify_user(fd, admin_user->username);
-}
+
 
 void admin_menu(int fd, User *admin_user){
     int choice;
@@ -75,10 +57,10 @@ void admin_menu(int fd, User *admin_user){
             add_new_employee(fd);
             break;}
         case 2:{
-            char username[MAX_USERNAME_LEN];
-            printf("Enter the username to modify: ");
-            scanf("%s", username);
-            modify_user(fd, username);
+            int id;
+            printf("Enter the id to modify: ");
+            scanf("%d", &id);
+            modify_user(fd, id);
             break;}
         case 3:{
             char username[MAX_USERNAME_LEN];
@@ -91,6 +73,7 @@ void admin_menu(int fd, User *admin_user){
             break;}
         case 4:{
             change_password(fd, admin_user);
+            break;
         }
         case 5:{
             logout(admin_user, fd);

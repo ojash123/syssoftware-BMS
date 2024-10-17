@@ -47,7 +47,7 @@ void view_transactions(int customer_id){
 
     printf("Past Transactions:\n");
     lseek(fd, 0, SEEK_SET);  
-    while (read(fd, &t, sizeof(Loan)) > 0) {
+    while (read(fd, &t, sizeof(Transaction)) > 0) {
         if (t.user_ID == customer_id) {
             switch (t.type)
             {
@@ -133,6 +133,7 @@ int update_balance(int customer_id, double amount, int type) {
                 close(fd);
                 return -1;
             }
+            printf("Prev Balance: %f\n", account.balance);
             if (account.balance + amount < 0) {
                 printf("This operation would reduce balance below 0\n");
                 close(fd);
@@ -149,7 +150,7 @@ int update_balance(int customer_id, double amount, int type) {
             }
             
             account.balance += amount;
-
+            printf("New balance : %f\n", account.balance);
             // Write the updated account back to the file
             lseek(fd, -sizeof(Account), SEEK_CUR); 
             if (write(fd, &account, sizeof(Account)) != sizeof(Account)) {

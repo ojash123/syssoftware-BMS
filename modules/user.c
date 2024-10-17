@@ -65,3 +65,23 @@ void change_password(int fd, User *user){
     }
     printf("User not found.\n");
 }
+
+void modify_user(int fd, int userid) {
+    User temp_user;
+    lseek(fd, 0, SEEK_SET);
+    while (read(fd, &temp_user, sizeof(User)) > 0) {
+        if (userid == temp_user.ID) {
+            printf("Enter new username for %s: ", temp_user.username);
+            scanf("%s", temp_user.username);
+            printf("Enter new password for %s: ", temp_user.username);
+            scanf("%s", temp_user.password);
+            printf("Enter ID: ");
+            scanf("%d", &temp_user.ID);
+            lseek(fd, -sizeof(User), SEEK_CUR);
+            write(fd, &temp_user, sizeof(User));
+            printf("User details updated.\n");
+            return;
+        }
+    }
+    printf("User not found.\n");
+}

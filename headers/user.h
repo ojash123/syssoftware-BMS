@@ -15,4 +15,5 @@ typedef struct {
 int login(User *user, int fd, const char* username, const char* password);
 int logout(User *user, int fd);
 void change_password(int fd, User *user);
+void modify_user(int fd, int userid) ;
 #endif

@@ -28,6 +28,7 @@ typedef struct {
 int update_balance(int customer_id,  double amount, int type);
 int save_acc_to_file(Account acc);
 int save_transaction(Transaction t);
+void view_transactions(int customer_id);
 int generate_unique_loan_id();
 Loan* read_loan(int loan_id);
 void display_pending_loans();
