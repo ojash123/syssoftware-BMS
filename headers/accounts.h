@@ -1,10 +1,10 @@
 #ifndef ACCOUNTS_H
 #define ACCOUNTS_H
-#define LOAN_ID_FILE "loan_id_counter.dat"
-#define LOAN_FILE "loans.dat"
-#define ACCOUNT_FILE "accounts.dat"
-#define TRANSACTION_FILE "transactions.dat"
-#define FEEDBACK_FILE "feedback.txt"
+#define LOAN_ID_FILE "database/loan_id_counter.dat"
+#define LOAN_FILE "database/loans.dat"
+#define ACCOUNT_FILE "database/accounts.dat"
+#define TRANSACTION_FILE "database/transactions.dat"
+#define FEEDBACK_FILE "database/feedback.txt"
 #include "user.h"
 #include <stdbool.h>
 typedef struct {
@@ -30,6 +30,8 @@ int update_balance(int customer_id,  double amount, int type);
 int save_acc_to_file(Account acc);
 int save_transaction(Transaction t);
 void view_transactions(int customer_id);
+void receive_transaction_history(int sock_fd);
+void view_transaction_history(int client_fd, int customer_id);
 int generate_unique_loan_id();
 Loan* read_loan(int loan_id);
 void display_pending_loans();

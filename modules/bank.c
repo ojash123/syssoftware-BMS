@@ -1,0 +1,6 @@
+#include "user.c"
+#include "accounts.c"
+#include "admin.c"
+#include "customer.c"
+#include "employee.c"
+#include "manager.c"

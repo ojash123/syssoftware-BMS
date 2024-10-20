@@ -9,6 +9,7 @@ int assign_loan_to_employee(int loan_id, int emp_id);
 
 void display_all_feedback() ;
 
-void manager_menu(int fd, User *manager);
+void manager_menu(int fd);
+int handle_manager_request(int client_sock, User *manager);
 
 #endif
