@@ -17,7 +17,7 @@ int add_new_customer(User new_customer) {
     if(save_acc_to_file(useracc) != 0) return -1;
     if(save_user_to_file(new_customer) != 0) return -1;
     
-    printf("New employee added successfully.\n");
+    printf("New customer added successfully.\n");
     return 0;
 }
 
@@ -43,45 +43,50 @@ void view_assigned_loans(int employee_id){
 
     close(fd);
 }
-void send_assigned_loans(int client_sock, int employee_id) {
-        int fd;
-        Loan loan;
-        char loan_buffer[256];
-        ssize_t bytes_written;
+void send_assigned_loans(char *buffer, size_t buffer_size, int employee_id) {
+    int fd;
+    Loan loan;
+    ssize_t bytes_read;
+    size_t offset = 0;
 
-        fd = open(LOAN_FILE, O_RDONLY);
-        if (fd == -1) {
-            snprintf(loan_buffer, sizeof(loan_buffer), "Error opening loan file\n");
-            write(client_sock, loan_buffer, strlen(loan_buffer));
-            return;
-        }
+    fd = open(LOAN_FILE, O_RDONLY);
+    if (fd == -1) {
+        perror("Error opening loan file");
+        return;
+    }
 
-        snprintf(loan_buffer, sizeof(loan_buffer), "Pending Loans:\n");
-        write(client_sock, loan_buffer, strlen(loan_buffer));  // Initial message to client
+    // Ensure buffer starts with an empty string
+    buffer[0] = '\0';
 
-        lseek(fd, 0, SEEK_SET);  
-        while (read(fd, &loan, sizeof(Loan)) > 0) {
-            if (loan.status == 0 && loan.employee_ID == employee_id) {
-                // Prepare loan information to be sent
-                snprintf(loan_buffer, sizeof(loan_buffer), 
-                    "Loan ID: %d, Customer ID: %d, Amount: %.2f\n",
-                    loan.loan_ID, loan.customer_ID, loan.loan_amount);
+    offset += snprintf(buffer + offset, buffer_size - offset, "Assigned Loans:\n");
 
-                // Send the loan information in chunks to avoid buffer overflow
-                bytes_written = write(client_sock, loan_buffer, strlen(loan_buffer));
-                if (bytes_written < 0) {
-                    perror("Error writing loan info to client");
-                    close(fd);
-                    return;
+    lseek(fd, 0, SEEK_SET);
+    while ((bytes_read = read(fd, &loan, sizeof(Loan))) > 0) {
+        if (loan.status == 0 && loan.employee_ID == employee_id) {
+            // Check if there is enough space in the buffer before adding more
+            if (offset < buffer_size) {
+                offset += snprintf(buffer + offset, buffer_size - offset,
+                                   "Loan ID: %d, Customer ID: %d, Amount: %.2f\n",
+                                   loan.loan_ID, loan.customer_ID, loan.loan_amount);
+
+                if (loan.employee_ID == -1) {
+                    offset += snprintf(buffer + offset, buffer_size - offset, "Status: Unassigned\n");
+                } else {
+                    offset += snprintf(buffer + offset, buffer_size - offset, "Assigned Employee ID: %d\n", loan.employee_ID);
                 }
+            } else {
+                // If buffer size is exceeded, truncate and stop further writing
+                snprintf(buffer + buffer_size - 5, 5, "...\n");
+                break;
             }
         }
+    }
 
-        // Indicate end of transmission
-        snprintf(loan_buffer, sizeof(loan_buffer), "END_OF_LOANS\n");
-        write(client_sock, loan_buffer, strlen(loan_buffer)); 
-
-        close(fd);
+    if (bytes_read == -1) {
+        perror("Error reading loan file");
+    }
+    printf("%s\n", buffer);
+    close(fd);
 }
 
 void receive_assigned_loans(int sockfd) {
@@ -248,7 +253,8 @@ void employee_menu(int sockfd) {
                 break;
 
             case 4:
-                receive_assigned_loans(sockfd);
+                snprintf(buffer, sizeof(buffer), "VIEW_ASSIGNED_LOANS\n");
+                write(sockfd, buffer, strlen(buffer));
                 break;
 
             case 5:
@@ -284,7 +290,7 @@ void employee_menu(int sockfd) {
         }
 
         // Read server response
-        int n = n = read(sockfd, buffer, sizeof(buffer) - 1);
+        int n  = read(sockfd, buffer, sizeof(buffer) - 1);
         
         buffer[n] = '\0';
         printf("Server: %s\n", buffer);
@@ -314,7 +320,7 @@ int handle_employee_request(int client_sock, User *employee) {
     }
     else if (strncmp(buffer, "MODIFY_CUSTOMER", 15) == 0) {
         char name[50], password[50];
-        sscanf(buffer, "MODIFY_CUSTOMER %d %s %s", name, password);
+        sscanf(buffer, "MODIFY_CUSTOMER %d %s %s", &id, name, password);
         User *user = read_user(id);
         strcpy(user->username, name);
         strcpy(user->password, password);
@@ -326,11 +332,11 @@ int handle_employee_request(int client_sock, User *employee) {
         }
     }
     else if (sscanf(buffer, "VIEW_TRANSACTIONS %d", &id) == 1) {
-        view_transaction_history(client_sock, id);
-        snprintf(buffer, sizeof(buffer), "Transaction History.");
+        view_transaction_history(buffer, id);
     }
     else if (sscanf(buffer, "VIEW_ASSIGNED_LOANS %d", &employee->ID) == 1) {
-        send_assigned_loans(client_sock, employee->ID);
+        strcpy(buffer, "");
+        send_assigned_loans(buffer,sizeof(buffer), employee->ID);
         snprintf(buffer, sizeof(buffer), "Assigned loans");
     }
     else if (sscanf(buffer, "PROCESS_LOAN %d %d", &loanid, &approve) == 2) {

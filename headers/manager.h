@@ -3,11 +3,11 @@
 #include "accounts.h"
 #include "user.h"
 
-int activate_account(int cust_id, bool active);
+int activate_account(int cust_id);
 
 int assign_loan_to_employee(int loan_id, int emp_id);
-
-void display_all_feedback() ;
+void get_pending_loans(char *buffer, size_t buffer_size) ;
+void read_all_feedback(char *feedback) ;
 
 void manager_menu(int fd);
 int handle_manager_request(int client_sock, User *manager);

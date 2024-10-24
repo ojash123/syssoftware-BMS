@@ -59,6 +59,7 @@ int main() {
             employee_menu(sockfd);
             break;
         case 3:
+            printf("manager\n");
             manager_menu(sockfd);
             break;
         case 4:

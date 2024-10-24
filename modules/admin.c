@@ -26,11 +26,12 @@ int modify_role(int user_id, int new_role){
 }
 
 void admin_menu(int sockfd) {
-    char buffer[256];
+    char buffer[1024];
     int choice;
     int id, role;
 
     while (1) {
+        memset(buffer, 0, sizeof(buffer));
         printf("\nAdmin Menu:\n");
         printf("1. Add New Bank Employee\n");
         printf("2. Modify Customer/Employee Details\n");
@@ -56,7 +57,8 @@ void admin_menu(int sockfd) {
 
             case 2:{
                 int id;
-                char new_name[50], new_password[50];            
+                char new_name[50], new_password[50];   
+                    
                 printf("Enter user ID to modify: ");
                 scanf("%d", &id);  
                 printf("Enter new user's name: ");
@@ -72,9 +74,10 @@ void admin_menu(int sockfd) {
                 // Request to manage user roles
                 printf("Enter the ID to manage role: ");
                 scanf("%d", &id);
-                printf("Enter the new role: ");
-                scanf("%d", &role);
-                snprintf(buffer, sizeof(buffer), "MANAGE_ROLES %d %d", id, role);
+                //printf("Enter the new role: ");
+                //getchar();
+                //scanf("%d", &role);
+                snprintf(buffer, sizeof(buffer), "MANAGE_ROLES %d", id);
                 write(sockfd, buffer, strlen(buffer));
                 break;
 
@@ -121,11 +124,11 @@ int handle_admin_request(int client_sock, User *admin) {
     // Read the request from the client
     int bytes_received = read(client_sock, buffer, sizeof(buffer) - 1);
     buffer[bytes_received] = '\0';
-
+    printf("Received %s\n", buffer);
     if (strncmp(buffer, "ADD_EMPLOYEE", 12) == 0) {
         // Handle adding a new employee
         char name[50], password[50];
-        sscanf(buffer, "ADD_CUSTOMER %s %s", name, password);
+        sscanf(buffer, "ADD_EMPLOYEE %s %s", name, password);
         User new_customer;
         strcpy(new_customer.username, name);
         strcpy(new_customer.password, password);
@@ -134,21 +137,23 @@ int handle_admin_request(int client_sock, User *admin) {
         } else {
             snprintf(response, sizeof(response), "Failed to add new employee.");
         }
-    } else if (strncmp(buffer, "MODIFY_USER", 15) == 0) {
+    } else if (strncmp(buffer, "MODIFY_USER", 11) == 0) {
         char name[50], password[50];
-        sscanf(buffer, "MODIFY_USER %d %s %s", name, password);
+        sscanf(buffer, "MODIFY_USER %d %s %s",&id, name, password);
         User *user = read_user(id);
         strcpy(user->username, name);
         strcpy(user->password, password);
         
         if (update_user(*user) == 0) {
-            snprintf(buffer, sizeof(buffer), "Customer modified successfully!");
+            snprintf(response, sizeof(response), "Customer modified successfully!");
         } else {
-            snprintf(buffer, sizeof(buffer), "Failed to modify customer!");
+            snprintf(response, sizeof(response), "Failed to modify customer!");
         }
-    } else if (sscanf(buffer, "MANAGE_ROLES %d, %d", &id, &role) == 1) {
+    } else if ( strncmp(buffer, "MANAGE_ROLES", 12) == 0) {
         // Handle managing user roles
-        if (modify_role(id, role) == 0) {
+        
+        sscanf(buffer, "MANAGE_ROLES %d", &id);
+        if (modify_role(id, 3) == 0) {
             snprintf(response, sizeof(response), "User %d role updated successfully.", id);
         } else {
             snprintf(response, sizeof(response), "Failed to update user %d role.", id);
@@ -158,22 +163,22 @@ int handle_admin_request(int client_sock, User *admin) {
         newpassword = buffer + sizeof("CHANGE_PASSWORD");
         strcpy(admin->password, newpassword);
         if(update_user(*admin) == 0){
-            snprintf(buffer, sizeof(buffer), "Password changed!");
+            snprintf(response, sizeof(response), "Password changed!");
         }else{
-            snprintf(buffer, sizeof(buffer), "Password change failed");
+            snprintf(response, sizeof(response), "Password change failed");
         }
     } else if (strncmp(buffer, "LOGOUT", 6) == 0) {
-        snprintf(buffer, sizeof(buffer), "Logging out...");
+        snprintf(response, sizeof(response), "Logging out...");
         logout(admin);
         return 0;
     }
     else if (strncmp(buffer, "EXIT", 4) == 0) {
-        snprintf(buffer, sizeof(buffer), "Exiting...");
+        snprintf(response, sizeof(response), "Exiting...");
         logout(admin);
         exit(EXIT_SUCCESS);
     }
     else {
-        snprintf(buffer, sizeof(buffer), "Invalid request!");
+        snprintf(response, sizeof(response), "Invalid request!");
     }
     // Send the response back to the client
     write(client_sock, response, strlen(response));

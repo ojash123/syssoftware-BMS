@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <fcntl.h>
 
 int activate_account(int cust_id){
     int fd;
@@ -65,21 +66,59 @@ int assign_loan_to_employee(int loan_id, int emp_id){
     
 }
 
+void get_pending_loans(char *buffer, size_t buffer_size) {
+    int fd;
+    Loan loan;
+    ssize_t bytes_read;
+    size_t offset = 0;
 
-char* read_all_feedback() {
+    fd = open(LOAN_FILE, O_RDONLY);
+    if (fd == -1) {
+        perror("Error opening loan file");
+        return;
+    }
+
+    // Ensure buffer starts with an empty string
+    buffer[0] = '\0';
+
+    offset += snprintf(buffer + offset, buffer_size - offset, "Pending Loans:\n");
+
+    lseek(fd, 0, SEEK_SET);
+    while ((bytes_read = read(fd, &loan, sizeof(Loan))) > 0) {
+        if (loan.status == 0) {
+            // Check if there is enough space in the buffer before adding more
+            if (offset < buffer_size) {
+                offset += snprintf(buffer + offset, buffer_size - offset,
+                                   "Loan ID: %d, Customer ID: %d, Amount: %.2f\n",
+                                   loan.loan_ID, loan.customer_ID, loan.loan_amount);
+
+                if (loan.employee_ID == -1) {
+                    offset += snprintf(buffer + offset, buffer_size - offset, "Status: Unassigned\n");
+                } else {
+                    offset += snprintf(buffer + offset, buffer_size - offset, "Assigned Employee ID: %d\n", loan.employee_ID);
+                }
+            } else {
+                // If buffer size is exceeded, truncate and stop further writing
+                snprintf(buffer + buffer_size - 5, 5, "...\n");
+                break;
+            }
+        }
+    }
+
+    if (bytes_read == -1) {
+        perror("Error reading loan file");
+    }
+    printf("%s\n", buffer);
+    close(fd);
+}
+
+void read_all_feedback(char *feedback_content) {
     int fd = open(FEEDBACK_FILE, O_RDONLY);
     if (fd == -1) {
         perror("Error opening feedback file");
-        return NULL;
     }
 
-    // Allocate enough memory to hold the entire file
-    char *feedback_content = malloc(1024);
-    if (feedback_content == NULL) {
-        perror("Error allocating memory");
-        close(fd);
-        return NULL;
-    }
+ 
 
     // Read the file content into the allocated memory
     lseek(fd, 0, SEEK_SET);  // Go back to the beginning of the file
@@ -88,16 +127,15 @@ char* read_all_feedback() {
         perror("Error reading feedback file");
         free(feedback_content);
         close(fd);
-        return NULL;
     }
 
     feedback_content[bytes_read] = '\0';  // Null-terminate the string
 
     close(fd);
-    return feedback_content;
+
 }
 
-void manager_menu(int sockfd, User *manager) {
+void manager_menu(int sockfd) {
     int choice;
     char buffer[1024];
     int customer_id, loan_id, employee_id;
@@ -177,7 +215,6 @@ void manager_menu(int sockfd, User *manager) {
 int handle_manager_request(int client_sock, User *manager) {
     char buffer[1024];
     int customer_id, loan_id, employee_id;
-    ssize_t bytes_received;
     int bytes_received = read(client_sock, buffer, sizeof(buffer) - 1);
     buffer[bytes_received] = '\0';
 
@@ -207,8 +244,8 @@ int handle_manager_request(int client_sock, User *manager) {
         write(client_sock, buffer, strlen(buffer));
 
     } else if (strncmp(buffer, "REVIEW_FEEDBACK", 15) == 0) {
-        char *feedback;
-        feedback = read_all_feedback();  // Populate feedback with feedback details
+        char feedback[1024];
+        read_all_feedback(feedback);  // Populate feedback with feedback details
         write(client_sock, feedback, strlen(feedback));
 
     } else if (strncmp(buffer, "LOGOUT", 6) == 0) {

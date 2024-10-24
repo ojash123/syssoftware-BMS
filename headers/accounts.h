@@ -31,7 +31,7 @@ int save_acc_to_file(Account acc);
 int save_transaction(Transaction t);
 void view_transactions(int customer_id);
 void receive_transaction_history(int sock_fd);
-void view_transaction_history(int client_fd, int customer_id);
+void view_transaction_history(char* buffer, int customer_id);
 int generate_unique_loan_id();
 Loan* read_loan(int loan_id);
 void display_pending_loans();

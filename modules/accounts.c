@@ -77,14 +77,14 @@ void view_transactions(int customer_id){
 
     close(fd);
 }
-void view_transaction_history(int client_fd, int customer_id) {
-    char buffer[1024];
-    memset(buffer, 0, sizeof(buffer));
-
+void view_transaction_history(char *output_buffer, int customer_id) {
+    char temp_buffer[1024];
+    memset(temp_buffer, 0, sizeof(temp_buffer));
+    memset(output_buffer, 0, 1024);  // Ensure output buffer is cleared
+    strcpy(output_buffer, "");
     int transaction_fd = open(TRANSACTION_FILE, O_RDONLY);
     if (transaction_fd < 0) {
-        snprintf(buffer, sizeof(buffer), "Error opening transaction file.\n");
-        write(client_fd, buffer, strlen(buffer));
+        snprintf(output_buffer, 34, "Error opening transaction file.\n");
         return;
     }
 
@@ -93,48 +93,47 @@ void view_transaction_history(int client_fd, int customer_id) {
 
     // Read through the transaction file
     while (read(transaction_fd, &t, sizeof(Transaction)) > 0) {
-        //fflush(stdout);
         if (t.user_ID == customer_id) {
             found = 1;
-            // Format transaction data
-            switch (t.type)
-            {
-            case 1:
-                snprintf(buffer, sizeof(buffer), "Deposited %.2f\n", t.amt);
-                break;
-            case 2:
-                snprintf(buffer, sizeof(buffer), "withdrew %.2f\n", t.amt);
-                break;
-            case 3:
-                snprintf(buffer, sizeof(buffer), "Transferred %.2f\n", t.amt);
-                break;
-            case 4:
-                snprintf(buffer, sizeof(buffer), "Received %.2f\n", t.amt);
-                break;
-            case 5:
-                snprintf(buffer, sizeof(buffer), "Loaned %.2f\n", t.amt);
-                break;
-            default:
-                snprintf(buffer, sizeof(buffer), "Invalid type error\n");
-                break;
+            // Format transaction data into the temp buffer
+            switch (t.type) {
+                case 1:
+                    snprintf(temp_buffer, sizeof(temp_buffer), "Deposited %.2f\n", t.amt);
+                    break;
+                case 2:
+                    snprintf(temp_buffer, sizeof(temp_buffer), "Withdrew %.2f\n", t.amt);
+                    break;
+                case 3:
+                    snprintf(temp_buffer, sizeof(temp_buffer), "Transferred %.2f\n", t.amt);
+                    break;
+                case 4:
+                    snprintf(temp_buffer, sizeof(temp_buffer), "Received %.2f\n", t.amt);
+                    break;
+                case 5:
+                    snprintf(temp_buffer, sizeof(temp_buffer), "Loaned %.2f\n", t.amt);
+                    break;
+                default:
+                    snprintf(temp_buffer, sizeof(temp_buffer), "Invalid type error\n");
+                    break;
             }
-            
-            // Send the formatted transaction data to the client
-            write(client_fd, buffer, strlen(buffer));
-            printf("%s\n", buffer);
-            memset(buffer, 0, sizeof(buffer));  // Clear buffer for next transaction
+
+            // Append the formatted transaction data to the output buffer
+            strncat(output_buffer, temp_buffer, 1024 - strlen(output_buffer) - 1);
+            // Ensure the output buffer does not overflow
+            output_buffer[1024 - 1] = '\0';  // Null-terminate the buffer
+            memset(temp_buffer, 0, sizeof(temp_buffer));  // Clear temp buffer for next transaction
         }
     }
 
     if (!found) {
-        snprintf(buffer, sizeof(buffer), "No transactions found for this customer.\n");
-        write(client_fd, buffer, strlen(buffer));
+        snprintf(temp_buffer, sizeof(temp_buffer), "No transactions found for this customer.\n");
+        strncat(output_buffer, temp_buffer, 1024 - strlen(output_buffer) - 1);
     }
-    write(client_fd, "END_TRANSACTIONS", sizeof("END_TRANSACTIONS"));
-    close(transaction_fd);
-    //view_transactions(customer_id);
-}
 
+    printf("%s\n", output_buffer);
+    close(transaction_fd);
+}
+/*
 void receive_transaction_history(int sock_fd) {
     char buffer[1024];
     int bytes_received;
@@ -149,7 +148,7 @@ void receive_transaction_history(int sock_fd) {
     }
     //printf("Hrmmm..\n");
 }
-
+*/
 int save_transaction(Transaction t) {
     int fd;
     struct flock lock;

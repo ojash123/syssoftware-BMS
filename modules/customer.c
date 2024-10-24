@@ -307,9 +307,9 @@ void customer_menu(int sockfd) {
             case 8:  // View transaction history
                 snprintf(buffer, sizeof(buffer), "VIEW_HISTORY");
                 write(sockfd, buffer, strlen(buffer));
-                receive_transaction_history(sockfd);
-                read(sockfd, buffer, sizeof(buffer));
-                //printf("%s\n", buffer);  // Transaction history
+                //receive_transaction_history(sockfd);
+                int n = read(sockfd, buffer, sizeof(buffer));
+                printf("%s size %d\n", buffer, n);  // Transaction history
                 break;
 
             case 9:  // Logout
@@ -403,8 +403,9 @@ int handle_customer_request(int client_sock, User *customer, int fd) {
             write(client_sock, buffer, strlen(buffer));
         }
         else if (strcmp(command, "VIEW_HISTORY") == 0) {
-            view_transaction_history(client_sock, customer->ID);
-            snprintf(buffer, sizeof(buffer), "Transaction History.");
+            memset(buffer, 0, sizeof(buffer));
+            view_transaction_history(buffer, customer->ID);
+            
             write(client_sock, buffer, strlen(buffer));
         }
         else if (strcmp(command, "LOGOUT") == 0) {
