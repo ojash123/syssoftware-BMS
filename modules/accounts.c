@@ -130,7 +130,6 @@ void view_transaction_history(char *output_buffer, int customer_id) {
         strncat(output_buffer, temp_buffer, 1024 - strlen(output_buffer) - 1);
     }
 
-    printf("%s\n", output_buffer);
     close(transaction_fd);
 }
 /*

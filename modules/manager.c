@@ -58,11 +58,11 @@ int assign_loan_to_employee(int loan_id, int emp_id){
     }
     if(loan->status != 0){
         printf("This loan is not pending!\n");
-        return 1;
+        return -1;
     }
     loan->employee_ID = emp_id;
     if(update_loan(*loan) != 0) return -1;
-    return 1;
+    return 0;
     
 }
 
@@ -151,7 +151,7 @@ void manager_menu(int sockfd) {
         printf("7. Exit\n");
         printf("Enter your choice: ");
         scanf("%d", &choice);
-
+        memset(buffer, 0, sizeof(buffer));
         switch (choice) {
             case 1:
                 printf("Enter Customer ID: ");
@@ -180,11 +180,17 @@ void manager_menu(int sockfd) {
                 scanf("%d", &employee_id);
                 snprintf(buffer, sizeof(buffer), "ASSIGN_LOAN %d %d", loan_id, employee_id);
                 write(sockfd, buffer, strlen(buffer));  // Send request to the server
+                // Receive response
+                read(sockfd, buffer, sizeof(buffer));
+                printf("%s\n", buffer);  // Show the result from the server
                 break;
 
             case 4:
                 snprintf(buffer, sizeof(buffer), "REVIEW_FEEDBACK");
                 write(sockfd, buffer, strlen(buffer));  // Send request to the server
+                // Receive response
+                read(sockfd, buffer, sizeof(buffer));
+                printf("%s\n", buffer);  // Show the result from the server
                 break;
 
             case 5:{
@@ -194,11 +200,17 @@ void manager_menu(int sockfd) {
                 scanf("%s", newpassword);
                 snprintf(buffer, sizeof(buffer), "CHANGE_PASSWORD %s", newpassword);
                 write(sockfd, buffer, strlen(buffer));
+                // Receive response
+                read(sockfd, buffer, sizeof(buffer));
+                printf("%s\n", buffer);  // Show the result from the server
                 break;}
 
             case 6:
                 snprintf(buffer, sizeof(buffer), "LOGOUT");
                 write(sockfd, buffer, strlen(buffer));  // Send request to the server
+                // Receive response
+                read(sockfd, buffer, sizeof(buffer));
+                printf("%s\n", buffer);  // Show the result from the server
                 return;
 
             case 7:
@@ -218,7 +230,7 @@ int handle_manager_request(int client_sock, User *manager) {
     int bytes_received = read(client_sock, buffer, sizeof(buffer) - 1);
     buffer[bytes_received] = '\0';
 
-
+    printf("Received %s\n", buffer);
     // Parse the request and handle accordingly
     if (strncmp(buffer, "TOGGLE_ACCOUNT", 14) == 0) {
         sscanf(buffer, "TOGGLE_ACCOUNT %d", &customer_id);
@@ -227,12 +239,13 @@ int handle_manager_request(int client_sock, User *manager) {
         } else {
             snprintf(buffer, sizeof(buffer), "Failed to update customer account.");
         }
-        write(client_sock, buffer, strlen(buffer));
+        
 
     } else if (strncmp(buffer, "SHOW_PENDING_LOANS", 18) == 0) {
-        char loans[1024];
-        get_pending_loans(loans, sizeof(loans));  // Populate loans with pending loan details
-        write(client_sock, loans, strlen(loans));
+        //char loans[1024];
+        get_pending_loans(buffer, sizeof(buffer));  // Populate loans with pending loan details
+        //printf("%s\n", loans);
+        //write(client_sock, loans, strlen(loans));
 
     } else if (strncmp(buffer, "ASSIGN_LOAN", 11) == 0) {
         sscanf(buffer, "ASSIGN_LOAN %d %d", &loan_id, &employee_id);
@@ -241,12 +254,10 @@ int handle_manager_request(int client_sock, User *manager) {
         } else {
             snprintf(buffer, sizeof(buffer), "Failed to assign loan.");
         }
-        write(client_sock, buffer, strlen(buffer));
 
     } else if (strncmp(buffer, "REVIEW_FEEDBACK", 15) == 0) {
         char feedback[1024];
-        read_all_feedback(feedback);  // Populate feedback with feedback details
-        write(client_sock, feedback, strlen(feedback));
+        read_all_feedback(buffer);  // Populate buffer with feedback details
 
     } else if (strncmp(buffer, "LOGOUT", 6) == 0) {
         snprintf(buffer, sizeof(buffer), "Logging out...");
@@ -262,6 +273,8 @@ int handle_manager_request(int client_sock, User *manager) {
         snprintf(buffer, sizeof(buffer), "Invalid request!");
     }
     // Send the response back to the client
+    printf("Sending%s\n", buffer);
+    write(client_sock, buffer, strlen(buffer));
     return 1;
 }
 

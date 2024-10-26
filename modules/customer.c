@@ -309,7 +309,7 @@ void customer_menu(int sockfd) {
                 write(sockfd, buffer, strlen(buffer));
                 //receive_transaction_history(sockfd);
                 int n = read(sockfd, buffer, sizeof(buffer));
-                printf("%s size %d\n", buffer, n);  // Transaction history
+                printf("%s\n", buffer);  // Transaction history
                 break;
 
             case 9:  // Logout
@@ -336,88 +336,91 @@ int handle_customer_request(int client_sock, User *customer, int fd) {
     int bytes_read;
     double amount;
     int recipient_id;
+    
+    bytes_read = read(client_sock, buffer, sizeof(buffer));
+    buffer[bytes_read] = '\0';  // Null terminate the received message
+    printf("Received %s\n", buffer);
+    char command[256];
+    sscanf(buffer, "%s", command);
 
-    while ((bytes_read = read(client_sock, buffer, sizeof(buffer))) > 0) {
-        buffer[bytes_read] = '\0';  // Null terminate the received message
-
-        char command[256];
-        sscanf(buffer, "%s", command);
-
-        if (strcmp(command, "VIEW_BALANCE") == 0) {
-            double balance = get_balance(customer->ID);
-            snprintf(buffer, sizeof(buffer), "Your balance is: %.2lf", balance);
-            write(client_sock, buffer, strlen(buffer));
-        } 
-        else if (strcmp(command, "DEPOSIT") == 0) {
-            sscanf(buffer, "DEPOSIT %lf", &amount);
-            if (update_balance(customer->ID, amount, 1) == 0) {
-                snprintf(buffer, sizeof(buffer), "Deposit successful!");
-            } else {
-                snprintf(buffer, sizeof(buffer), "Deposit failed!");
-            }
-            write(client_sock, buffer, strlen(buffer));
-        } 
-        else if (strcmp(command, "WITHDRAW") == 0) {
-            sscanf(buffer, "WITHDRAW %lf", &amount);
-            if (update_balance(customer->ID, -amount, 2) == 0) {
-                snprintf(buffer, sizeof(buffer), "Withdrawal successful!");
-            } else {
-                snprintf(buffer, sizeof(buffer), "Insufficient balance or withdrawal failed!");
-            }
-            write(client_sock, buffer, strlen(buffer));
-        } 
-        else if (strcmp(command, "TRANSFER") == 0) {
-            sscanf(buffer, "TRANSFER %d %lf", &recipient_id, &amount);
-            if (transfer_funds(customer->ID, recipient_id, amount) == 0) {
-                snprintf(buffer, sizeof(buffer), "Transfer successful!");
-            } else {
-                snprintf(buffer, sizeof(buffer), "Transfer failed!");
-            }
-            write(client_sock, buffer, strlen(buffer));
-        } 
-        else if (strcmp(command, "APPLY_LOAN") == 0) {
-            sscanf(buffer, "APPLY_LOAN %lf", &amount);
-            apply_loan(customer->ID, amount);
-            snprintf(buffer, sizeof(buffer), "Loan application submitted.");
-            write(client_sock, buffer, strlen(buffer));
+    if (strcmp(command, "VIEW_BALANCE") == 0) {
+        double balance = get_balance(customer->ID);
+        snprintf(buffer, sizeof(buffer), "Your balance is: %.2lf", balance);
+        //write(client_sock, buffer, strlen(buffer));
+    } 
+    else if (strcmp(command, "DEPOSIT") == 0) {
+        sscanf(buffer, "DEPOSIT %lf", &amount);
+        if (update_balance(customer->ID, amount, 1) == 0) {
+            snprintf(buffer, sizeof(buffer), "Deposit successful!");
+        } else {
+            snprintf(buffer, sizeof(buffer), "Deposit failed!");
         }
-        else if (strcmp(command, "CHANGE_PASSWORD") == 0) {
-            char *newpassword;
-            newpassword = buffer + sizeof("CHANGE_PASSWORD");
-            strcpy(customer->password, newpassword);
-            if(update_user(*customer) == 0){
-                snprintf(buffer, sizeof(buffer), "Password changed!");
-            }else{
-                snprintf(buffer, sizeof(buffer), "Password change failed");
-            }
-            write(client_sock, buffer, strlen(buffer));
-            
-        } 
-        else if (strcmp(command, "ADD_FEEDBACK") == 0) {
-            char *feedback;
-            //sscanf(buffer, "ADD_FEEDBACK %s", feedback);
-            feedback = buffer + sizeof("add feedback");
-            printf("%s\n", feedback);
-            write_feedback(customer->ID, feedback);
-            snprintf(buffer, sizeof(buffer), "Feedback submitted.");
-            write(client_sock, buffer, strlen(buffer));
+        //write(client_sock, buffer, strlen(buffer));
+    } 
+    else if (strcmp(command, "WITHDRAW") == 0) {
+        sscanf(buffer, "WITHDRAW %lf", &amount);
+        if (update_balance(customer->ID, -amount, 2) == 0) {
+            snprintf(buffer, sizeof(buffer), "Withdrawal successful!");
+        } else {
+            snprintf(buffer, sizeof(buffer), "Insufficient balance or withdrawal failed!");
         }
-        else if (strcmp(command, "VIEW_HISTORY") == 0) {
-            memset(buffer, 0, sizeof(buffer));
-            view_transaction_history(buffer, customer->ID);
-            
-            write(client_sock, buffer, strlen(buffer));
+        //write(client_sock, buffer, strlen(buffer));
+    } 
+    else if (strcmp(command, "TRANSFER") == 0) {
+        sscanf(buffer, "TRANSFER %d %lf", &recipient_id, &amount);
+        if (transfer_funds(customer->ID, recipient_id, amount) == 0) {
+            snprintf(buffer, sizeof(buffer), "Transfer successful!");
+        } else {
+            snprintf(buffer, sizeof(buffer), "Transfer failed!");
         }
-        else if (strcmp(command, "LOGOUT") == 0) {
-            logout(customer);
-            return 0;
-        }
-        else if (strcmp(command, "EXIT") == 0) {
-            printf("User exited.\n");
-            logout(customer);
-            close(client_sock);
-            exit(0);
-        }
+        //write(client_sock, buffer, strlen(buffer));
+    } 
+    else if (strcmp(command, "APPLY_LOAN") == 0) {
+        sscanf(buffer, "APPLY_LOAN %lf", &amount);
+        apply_loan(customer->ID, amount);
+        snprintf(buffer, sizeof(buffer), "Loan application submitted.");
+        //write(client_sock, buffer, strlen(buffer));
     }
+    else if (strcmp(command, "CHANGE_PASSWORD") == 0) {
+        char *newpassword;
+        newpassword = buffer + sizeof("CHANGE_PASSWORD");
+        strcpy(customer->password, newpassword);
+        if(update_user(*customer) == 0){
+            snprintf(buffer, sizeof(buffer), "Password changed!");
+        }else{
+            snprintf(buffer, sizeof(buffer), "Password change failed");
+        }
+        //write(client_sock, buffer, strlen(buffer));
+        
+    } 
+    else if (strcmp(command, "ADD_FEEDBACK") == 0) {
+        char *feedback;
+        //sscanf(buffer, "ADD_FEEDBACK %s", feedback);
+        feedback = buffer + sizeof("add feedback");
+        printf("%s\n", feedback);
+        write_feedback(customer->ID, feedback);
+        snprintf(buffer, sizeof(buffer), "Feedback submitted.");
+        //write(client_sock, buffer, strlen(buffer));
+    }
+    else if (strcmp(command, "VIEW_HISTORY") == 0) {
+        memset(buffer, 0, sizeof(buffer));
+        view_transaction_history(buffer, customer->ID);
+        
+        //write(client_sock, buffer, strlen(buffer));
+    }
+    else if (strcmp(command, "LOGOUT") == 0) {
+        snprintf(buffer, sizeof(buffer), "Logging out...");
+        logout(customer);
+        return 0;
+    }
+    else if (strcmp(command, "EXIT") == 0) {
+        snprintf(buffer, sizeof(buffer), "Exiting...");
+        logout(customer);
+        close(client_sock);
+        exit(0);
+    }
+    
+    printf("Sending%s\n", buffer);
+    write(client_sock, buffer, strlen(buffer));
     return 1;
 }

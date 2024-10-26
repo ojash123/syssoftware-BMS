@@ -134,7 +134,7 @@ int process_loan(int loan_id, int approve){
         loan->status = -1;
         if(update_loan(*loan)!= 0) return -1;
     }
-    return 1;
+    return 0;
     
 }
 /*
@@ -203,7 +203,7 @@ void employee_menu_test(int fd, User *employee){
 }
 */
 void employee_menu(int sockfd) {
-    char buffer[256];
+    char buffer[1024];
     int choice, id, loanid, approve;
     
     while (1) {
@@ -218,7 +218,7 @@ void employee_menu(int sockfd) {
         printf("8. Exit\n");
         printf("Enter your choice: ");
         scanf("%d", &choice);
-        
+        memset(buffer, 0, sizeof(buffer));
         switch (choice) {
             case 1:{
                 char name[50], password[50];
@@ -304,7 +304,7 @@ int handle_employee_request(int client_sock, User *employee) {
 
     n = read(client_sock, buffer, sizeof(buffer) - 1);
     buffer[n] = '\0';
-
+    printf("Received %s\n", buffer);
     if (strncmp(buffer, "ADD_CUSTOMER", 12) == 0) {
         //read newcustomer details
         char name[50], password[50];
@@ -331,13 +331,13 @@ int handle_employee_request(int client_sock, User *employee) {
             snprintf(buffer, sizeof(buffer), "Failed to modify customer!");
         }
     }
-    else if (sscanf(buffer, "VIEW_TRANSACTIONS %d", &id) == 1) {
+    else if (strncmp(buffer, "VIEW_TRANSACTIONS", 17) == 0) {
+        sscanf(buffer, "VIEW_TRANSACTIONS %d", &id);
         view_transaction_history(buffer, id);
     }
-    else if (sscanf(buffer, "VIEW_ASSIGNED_LOANS %d", &employee->ID) == 1) {
-        strcpy(buffer, "");
+    else if (strncmp(buffer, "VIEW_ASSIGNED_LOANS", 19) == 0) {
         send_assigned_loans(buffer,sizeof(buffer), employee->ID);
-        snprintf(buffer, sizeof(buffer), "Assigned loans");
+        //snprintf(buffer, sizeof(buffer), "Assigned loans");
     }
     else if (sscanf(buffer, "PROCESS_LOAN %d %d", &loanid, &approve) == 2) {
         if (process_loan(loanid, approve) == 0) {
@@ -371,6 +371,7 @@ int handle_employee_request(int client_sock, User *employee) {
     }
 
     // Send response back to client
+    printf("Sending: %s\n", buffer);
     write(client_sock, buffer, strlen(buffer));
     return 1;
 }

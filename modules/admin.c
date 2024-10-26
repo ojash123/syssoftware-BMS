@@ -181,6 +181,7 @@ int handle_admin_request(int client_sock, User *admin) {
         snprintf(response, sizeof(response), "Invalid request!");
     }
     // Send the response back to the client
+    printf("Sending: %s\n", response);
     write(client_sock, response, strlen(response));
     return 1;
 }
